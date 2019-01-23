@@ -3,6 +3,16 @@
 import pygame
 import random
 
+# Define the screen parameters
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# Define the colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (210, 0, 0)
+BLUE = (30, 144, 255)
+
 
 class Soldier(pygame.sprite.Sprite):
     def __init__(self, color):
@@ -16,10 +26,22 @@ class Soldier(pygame.sprite.Sprite):
         self.image = pygame.Surface([self.r * 2, self.r * 2])  # Set the dimensions for the image
         self.image.set_colorkey(BLACK)  # Make background transparent
         pygame.draw.circle(self.image, self.color, (self.r, self.r), self.r)
-        self.rect = self.image.get_rect()
+        self.rect = self.image.get_rect()  # Object that gets the position of the image
 
-    def move():
-        pass
+    def update(self):
+        # TODO: Figure out how to move without hitting anyone else
+        num = random.randint(1, 5)
+
+        if (num == 1 and self.rect.x < SCREEN_WIDTH - (2 * self.r) - self.vel):
+            self.rect.x += self.vel
+        elif (num == 2 and self.rect.y < SCREEN_HEIGHT - (2 * self.r) - self.vel):
+            self.rect.y += self.vel
+        elif (num == 3 and self.rect.x > self.vel):
+            self.rect.x -= self.vel
+        elif (num == 4 and self.rect.y > self.vel):
+            self.rect.y -= self.vel
+
+        pygame.time.wait(10)
 
     def attack1():
         pass
@@ -37,21 +59,12 @@ class Soldier(pygame.sprite.Sprite):
 """
 --------------- Setup ----------------
 """
-# Define the screen parameters
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-
-# Define the colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-RED = (210, 0, 0)
-BLUE = (30, 144, 255)
-
 # Setup the soliders
 red_soldier_list = pygame.sprite.Group()
 blue_soldier_list = pygame.sprite.Group()
 total_soldier_list = pygame.sprite.Group()
 
+# Display the red soldiers
 for i in range(10):
     red_soldier = Soldier(RED)
 
@@ -61,6 +74,7 @@ for i in range(10):
     red_soldier_list.add(red_soldier)
     total_soldier_list.add(red_soldier)
 
+# Display the blue soldiers
 for i in range(10):
     blue_soldier = Soldier(BLUE)
 
@@ -72,10 +86,11 @@ for i in range(10):
 
 pygame.init()
 
+# Setup the screen
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Battle Simulator")
 
-clock = pygame.time.Clock()
+clock = pygame.time.Clock()  # Setup the clock
 
 """
 --------------- Main Program ---------------
@@ -89,11 +104,9 @@ while not done:
 
     # --- Game logic goes here ---
 
-    # --- Screen clearing goes here ---
     screen.fill(BLACK)
-
-    # --- Drawing code goes here ---
     total_soldier_list.draw(screen)
+    total_soldier_list.update()
 
     pygame.display.flip()
     clock.tick(60)
