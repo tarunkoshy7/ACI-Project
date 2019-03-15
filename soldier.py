@@ -40,14 +40,14 @@ class Soldier(pygame.sprite.Sprite):
     def move(self):
         num = random.randint(1, 5)
 
-        if (num == 1 and self.rect.x < SCREEN_WIDTH - (4 * self.r) - self.vel):
-            self.rect.x += self.vel
-        elif (num == 2 and self.rect.y < SCREEN_HEIGHT - (4 * self.r) - self.vel):
+        if(num == 1 and self.rect.y < SCREEN_HEIGHT - (4 * self.r) - self.vel * 2):
             self.rect.y += self.vel
-        elif (num == 3 and self.rect.x > self.vel):
-            self.rect.x -= self.vel
-        elif (num == 4 and self.rect.y > self.vel):
+        elif(num == 2 and self.rect.y > self.vel * 2):
             self.rect.y -= self.vel
+        elif(num == 3 and self.rect.x > self.vel * 2.5):
+            self.rect.x -= self.vel
+        elif(num == 4 and self.rect.x < SCREEN_WIDTH - (4 * self.r) - self.vel * 2):
+            self.rect.x += self.vel
 
     def offense(self, other, allies):
         hit = pygame.sprite.spritecollide(self, allies, False)
