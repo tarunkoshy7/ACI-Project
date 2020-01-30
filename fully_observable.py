@@ -18,6 +18,10 @@ RED = (210, 0, 0)
 BLUE = (30, 144, 255)
 GREEN = (50, 205, 50)
 
+# CHANGE NUMBER OF SOLDIERS HERE
+numberOfRedSoldiers = 10
+numberOfBlueSoldiers = 10
+
 actionSpace = {1: "up", 2: "down", 3: "left", 4: "right", 5: "light attack", 6: "heavy attack", 7: "heal",
                8: "retreat"}
 stateSpace = dict()
@@ -52,7 +56,7 @@ total_soldier_list = pygame.sprite.Group()  # Add both of the soldiers to a tota
 
 def setup():
     # Display the red soldiers
-    for i in range(10):
+    for i in range(numberOfRedSoldiers):
         red_soldier = soldier.Soldier(RED)
 
         # Spawn the soldiers randomly on the left side of the screen
@@ -65,7 +69,7 @@ def setup():
         total_soldier_list.add(red_soldier)
 
     # Display the blue soldiers
-    for i in range(15):
+    for i in range(numberOfBlueSoldiers):
         blue_soldier = soldier.Soldier(BLUE)
 
         # Spawn the soldiers randomly on the right side of the screen
@@ -94,6 +98,13 @@ def getState(soldier):
 def doAction(soldier, currentAction):
     collision = pygame.sprite.spritecollide(soldier, blue_soldier_list, False)
 
+    if collision:
+        oldEnemyHealth = collision[0].health
+    else:
+        oldEnemyHealth = 0
+
+    oldSoldierHealth = soldier.health
+
     if(currentAction == 1 and soldier.rect.y < SCREEN_HEIGHT - (4 * soldier.r) - soldier.vel * 2):
         soldier.rect.y += soldier.vel
     elif(currentAction == 2 and soldier.rect.y > soldier.vel * 2):
@@ -111,49 +122,45 @@ def doAction(soldier, currentAction):
     elif(currentAction == 8 and collision):
         soldier.retreat(screen)
 
+    return oldEnemyHealth, oldSoldierHealth
 
-def rewardFunction(soldier, currentAction, currentState):
+
+def rewardFunction(soldier, oldEnemyHealth, oldSoldierHealth, currentAction, currentState):
+    # CHANGE THE REWARD GIVEN HERE
     reward = 0
     collision = pygame.sprite.spritecollide(soldier, blue_soldier_list, False)
 
     if(stateSpace[currentState] == "combat 75+"):
-        reward += 50
-        if(currentAction == 5 and collision and soldier.light_attack):
-            reward += 20
-        elif(currentAction == 6 and collision and soldier.heavy_attack):
-            reward += 35
-        elif(currentAction == 7):
-            reward -= 40
-        elif(currentAction == 8):
-            reward -= 50
-        elif(currentAction == 1 or 2 or 3 or 4):
-            reward -= 150
+        # in this state, we want to maximize the damage dealt
+        if collision:
+            reward += (oldEnemyHealth - collision[0].health) * 10
+
+        if reward == 0:
+            reward -= 10
 
     elif(stateSpace[currentState] == "combat 35+"):
-        reward += 50
-        if(currentAction == 5 and collision and soldier.light_attack):
-            reward += 20
-        elif(currentAction == 6 and collision and soldier.heavy_attack):
-            reward += 35
-        elif(currentAction == 7 and soldier.heal):
-            reward += 15
-        elif(currentAction == 8):
+        # either healing or attacking is acceptable here
+        if collision:
+            reward += (oldEnemyHealth - collision[0].health) * 10
+            reward += (soldier.health - oldSoldierHealth) * 10
+
+        if(currentAction == 8 and soldier.retreat):
+            # retreat reward manually assigned since no way to classify in terms of health
+            reward += 10
+
+        if reward == 0:
             reward -= 10
-        elif(currentAction == 1 or 2 or 3 or 4):
-            reward -= 150
 
     elif(stateSpace[currentState] == "combat 0+"):
-        reward += 50
-        if(currentAction == 5 and collision and soldier.light_attack):
-            reward += 10
-        elif(currentAction == 6 and collision and soldier.heavy_attack):
-            reward += 25
-        elif(currentAction == 7 and soldier.heal):
-            reward += 50
-        elif(currentAction == 8 and soldier.retreat):
+        # the priority here is to stay alive
+        if collision:
+            reward += (soldier.health - oldSoldierHealth) * 10
+
+        if(currentAction == 8 and soldier.retreat):
             reward += 20
-        elif(currentAction == 1 or 2 or 3 or 4):
-            reward -= 150
+
+        if reward == 0:
+            reward -= 10
 
     elif(blue_soldier_list):
         xMinDistance = 10000
@@ -195,6 +202,7 @@ def rewardFunction(soldier, currentAction, currentState):
 
 
 def train(soldier):
+    # CHANGE Q-LEARNING PARAMETERS HERE
     alpha = 0.1
     gamma = 0.6
     epsilon = 0.1
@@ -211,15 +219,54 @@ def train(soldier):
         else:
             currentAction = np.argmax(qTable[currentState - 1]) + 1
 
-    doAction(soldier, currentAction)
+    oldEnemyHealth, oldSoldierHealth = doAction(soldier, currentAction)
 
-    reward = rewardFunction(soldier, currentAction, currentState)
+    reward = rewardFunction(soldier, oldEnemyHealth, oldSoldierHealth, currentAction, currentState)
     qValueOld = qTable[currentState - 1, currentAction - 1]
     nextState = getState(soldier)
     nextMax = np.max(qTable[nextState - 1])
 
     qValueNew = (1 - alpha) * qValueOld + alpha * (reward + gamma * nextMax)
     qTable[currentState - 1, currentAction - 1] = qValueNew
+
+
+def pause():
+
+    pause = True
+
+    while pause:
+        pygame.event.pump()
+        font = pygame.font.SysFont('Papyrus', 24, True)
+        font2 = pygame.font.SysFont('Calibri', 20, True)
+        text = font.render('PAUSED', False, WHITE)
+        textrect = text.get_rect()
+        textrect.center = (SCREEN_WIDTH / 2), (40)
+        screen.blit(text, textrect)
+
+        text1 = font2.render("At health >= 75: %s" % qTable[3869], False, WHITE)
+        textrect1 = text1.get_rect()
+        textrect1.center = (SCREEN_WIDTH / 2), (500)
+        screen.blit(text1, textrect1)
+
+        text2 = font2.render("At health >= 35: %s" % qTable[3870], False, WHITE)
+        textrect2 = text2.get_rect()
+        textrect2.center = (SCREEN_WIDTH / 2), (520)
+        screen.blit(text2, textrect2)
+
+        text3 = font2.render("At health >= 0: %s" % qTable[3871], False, WHITE)
+        textrect3 = text3.get_rect()
+        textrect3.center = (SCREEN_WIDTH / 2), (540)
+        screen.blit(text3, textrect3)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    pause = False
+        pygame.display.flip()
+        clock.tick(60)
 
 
 def run():
@@ -233,6 +280,9 @@ def run():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    pause()
 
         screen.fill(BLACK)
         total_soldier_list.draw(screen)
@@ -254,9 +304,10 @@ def run():
                     elif blue_attack == 4:
                         blue_soldier.retreat(screen)
 
-                # elif (len(red_soldier_list.sprites()) > 0):
-                #     random_red = random.randint(0, len(red_soldier_list.sprites()) - 1)
-                #     blue_soldier.offense(red_soldier_list.sprites()[random_red], blue_soldier_list)
+                #  COMMENT THIS ELIF STATEMENT TO REMOVE AGGRESSIVE BEHAVIOR
+                elif (len(red_soldier_list.sprites()) > 0):
+                    random_red = random.randint(0, len(red_soldier_list.sprites()) - 1)
+                    blue_soldier.offense(red_soldier_list.sprites()[random_red], blue_soldier_list)
                 else:
                     blue_soldier.move()
         else:
@@ -295,6 +346,3 @@ def run():
         pygame.display.flip()
         clock.tick(60)
         turn += 1
-
-
-run()

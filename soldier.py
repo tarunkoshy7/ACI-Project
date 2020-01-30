@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# This class defines the properties of a soldier
 
 import pygame
 import random
@@ -17,7 +18,7 @@ GREEN = (50, 205, 50)
 
 class Soldier(pygame.sprite.Sprite):
     def __init__(self, color):
-        pygame.sprite.Sprite.__init__(self)
+        pygame.sprite.Sprite.__init__(self)  # Sprite module in pygame makes it easier to handle collision mechanics
 
         self.health = 100
         self.r = 15
@@ -38,6 +39,8 @@ class Soldier(pygame.sprite.Sprite):
         pygame.draw.rect(self.image, GREEN, (self.r - 9, self.r - 9, (0.5 * self.health), 6))
 
     def move(self):
+        # Function for random movement
+
         num = random.randint(1, 5)
 
         if(num == 1 and self.rect.y < SCREEN_HEIGHT - (4 * self.r) - self.vel * 2):
@@ -50,6 +53,8 @@ class Soldier(pygame.sprite.Sprite):
             self.rect.x += self.vel
 
     def offense(self, other, allies):
+        # Function for aggressive movement
+
         hit = pygame.sprite.spritecollide(self, allies, False)
 
         if (other.rect.x > self.rect.x and other.rect.x < SCREEN_WIDTH - (4 * self.r) - self.vel):
